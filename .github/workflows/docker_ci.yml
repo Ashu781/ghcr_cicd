@@ -1,0 +1,48 @@
+name: docker_cicd
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: check bash availability
+        run: bash --version
+
+      - name: execute script with default arg
+        run: bash greetings.sh
+
+      - name: execute script with custom arg
+        run: bash greetings.sh anant
+
+      - name: execute script with --help arg
+        run: bash greetings.sh --help
+
+  docker-build:
+    needs: test-execution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: check docker versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: build docker image
+        run: docker build -t "${{secrets.DOCKERHUB_USERNAME}}/greet:sha-${GITHUB_SHA::7}" .
+
+      - name: docker hub login
+        run: echo "${{secrets.DOCKERHUB_TOKEN}} | docker login -u ${{secrets.DOCKERHUB_USERNAME}}" --password-stdin
+
+      - name: image push to docker hub registry
+        run: docker push "${{secrets.DOCKERHUB_USERNAME}}/greet:sha-${GITHUB_SHA::7}"
