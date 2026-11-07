@@ -1,0 +1,35 @@
+name: ghcr workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: execute script
+        run: bash greetings.sh
+
+  docker-build:
+    needs: test-execution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: docker build
+        run: docker build -t ghcr.io/ashu781/greet:sha-"${GITHUB_SHA::7}"
+
+      - name: ghcr_login
+        run: echo "${{secrets.GITHUB_TOKEN}}" | docker login ghcr.io -u "${{github.actor}}" --password-stdin
+
+      - name: ghcr package push
+        run: docker push ghcr.io/ashu781/greet:sha-"${GITHUB_SHA::7}"
